@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Body, Path, Query, HTTPException
+from fastapi import FastAPI, Body, Path, Query, HTTPException # type: ignore
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from main import run_agent

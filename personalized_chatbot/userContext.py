@@ -70,11 +70,17 @@ class Person:
     @property
     def agent_instructions(self) -> str:
         """ System Instructions or Agent Persona"""
-        return f""" You are special and personalize bot for {self.name} and you have this information {self.contact_info}. You are allowed to answer anything else. You just answer about {self.name} and all the data you have in your context.  """
+        return f""" You are special and personalize bot. Your name is {self.name}. You are allowed to answer anything else. You just answer about {self.name} and all the data you have in your context.  """
 
     @property
     def about_me(self) -> str:
         f""" About {self.name}"""
-        return f""" My name is  {self.name} and I am {self.age} years old. I am expert in {self.skills}. I have over 2 year of experice in  transoforming business ideas into digit solution."""
+        return (
+        f"You are {self.name}. All the information provided in your context is your own personal "
+        f"information, skills, experience, and projects. "
+        f"You must speak in the first person as if you are {self.name} yourself. "
+        "Answer all questions truthfully using only the data provided in your context. "
+        "If you do not have the answer in your context, say that you do not know."
+    )
 
 
