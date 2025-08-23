@@ -1,12 +1,14 @@
-from agents import Agent, Runner, AsyncOpenAI , OpenAIChatCompletionsModel, function_tool, RunContextWrapper,handoff
+from agents import Agent, Runner, AsyncOpenAI , OpenAIChatCompletionsModel, RunContextWrapper,handoff, function_tool
 from agents.run import RunConfig
-from dotenv import load_dotenv, find_dotenv
+from dotenv import load_dotenv
 import os
 import asyncio
 from openai.types.responses import ResponseTextDeltaEvent
 from tavily import TavilyClient, AsyncTavilyClient
 from pydantic import BaseModel
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+# from .synthesis_agent import synthesis_agent, on_synthesis
+# from .research_agent import research_agent
 
 _: bool = load_dotenv()
 
@@ -51,8 +53,8 @@ def on_search(wrapper: RunContextWrapper , input: EscilationData):
     print("\n On Search Agent Handoffs \n Input" , input)
 
 
-def on_parallel_search(wrapper: RunContextWrapper , input: EscilationData):
-    print("\n On Parallel Search Agent Handoffs \n Input" , input)
+# def on_parallel_search(wrapper: RunContextWrapper , input: EscilationData):
+#     print("\n On Parallel Search Agent Handoffs \n Input" , input)
 
 
 
@@ -73,10 +75,12 @@ config: RunConfig = RunConfig(
     tracing_disabled=False
 )
 
-parallel_search_agent: Agent = Agent(
-    name='parallel_search_agent',
-    instructions=f''' {RECOMMENDED_PROMPT_PREFIX}
-    You will search the user query deeply over the internet atleast 3 times.''',
+report_agent: Agent = Agent(
+    name='report_agent',
+    instructions=f'''
+                You will final professional research. You should transfer to the orchestrator_agent.
+                ''',
+    model=model,
     tools=[web_search, extract_url]
 )
 
@@ -85,49 +89,80 @@ search_agent: Agent = Agent(
     instructions=f''' {RECOMMENDED_PROMPT_PREFIX}
     you can search over the internet. You will pass the response to parallel_search_agent
     ''',
+    model=model,
     tools=[ web_search , extract_url],
-    handoffs=[
-        handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
-    ]    
+    # handoffs=[
+    #     handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
+    # ]    
 
 )
 
+
 planning_agent: Agent = Agent(
     name="planning_agent",
-    instructions=f'''  {RECOMMENDED_PROMPT_PREFIX}
-    You are planning agent who will break the user query into parts and then transfer to other agents
+    instructions=f'''  
+    You are planning agent who will break the user query into parts and then must transfer to report_agent
     ''',
+    model=model,
     handoffs=[
         handoff(agent=search_agent, on_handoff=on_search, input_type=EscilationData ),
-        handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
+        # handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
     ]
 )
 
 
 
+def on_synthesis(wrapper : RunContextWrapper , input: EscilationData):
+    print("On Synthesis Agent -- Input" , input)
 
+synthesis_agent: Agent = Agent(
+    name='synthesis_agent',
+    instructions=f' You will gather information and combines findings into organized insights. Then you must transfer to the planning_agent',
+    model=model,
+    handoffs=[handoff(agent=planning_agent , on_handoff=on_planning , input_type=EscilationData)]
+)
+
+
+
+lead_agent: Agent = Agent(
+    name='orchestrator_agent',
+    instructions=f""" {RECOMMENDED_PROMPT_PREFIX}. You will first transfer to the synthesis_agent""",
+    tools=[
+    search_agent.as_tool(
+        tool_name='search_web',
+        tool_description="Search Goolge and Web"
+    ),
+    report_agent.as_tool(
+        tool_name='report_writer',
+        tool_description='professional report writer'
+    )
+    ],
+    handoffs=[
+        handoff(agent=synthesis_agent, on_handoff=on_synthesis , input_type=EscilationData),
+    ]
+)
+
+def on_lead_agent(wrapper: RunContextWrapper , input : EscilationData):
+    print(f"On Lead Agent --- input {input}")
+
+def on_report_agent(wrapper: RunContextWrapper , input : EscilationData):
+    print(f"On Report Agent --- input {input}")
+
+
+planning_agent.handoffs.append(handoff(agent=report_agent , on_handoff=on_report_agent , input_type=EscilationData))
+report_agent.handoffs.append(handoff(agent=lead_agent, on_handoff=on_synthesis , input_type=EscilationData))
 
 
 async def run_agent():
-    agent: Agent = Agent(
-        name='orchestrator_agent',
-        instructions=f""" {RECOMMENDED_PROMPT_PREFIX}""",
-        tools=[planning_agent.as_tool(
-            tool_name='planning_tool',
-            tool_description="Planning and Dividing the topic"
-        )]
-        # handoffs=[
-        #     handoff(agent=planning_agent, on_handoff=on_planning , input_type=EscilationData),
-        # ]
-    )
 
     response: Runner =  Runner.run_streamed(
-        agent,
+        lead_agent,
         "Search deeply about difference between Agentic AI and Generative AI",
-        run_config=config
+        run_config=config,
+        max_turns=15
     )
 
-    print(response.last_agent.name)
+    # print(response.last_agent.name)
     async for event in response.stream_events():
         if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
             print(event.data.delta , end="" , flush=True)
