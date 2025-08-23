@@ -36,7 +36,13 @@ def all_about_me(wrapper: RunContextWrapper[Person]) -> Person:
 async def instructions(wrapper: RunContextWrapper[Person], agent: Agent) -> str:
     # print(wrapper.context)
     # print(person)
-    return wrapper.context.agent_instructions
+    return (
+        f"{wrapper.context.agent_instructions}"
+        f" You are a personal assistant for {wrapper.context.name}. "
+        f"Your name is {agent.name}. "
+        f"You are very helpful and you always try to help {wrapper.context.name} in the best way possible. "
+        
+    )
 
 
 async def run_agent(input: str) -> str:
@@ -52,5 +58,7 @@ async def run_agent(input: str) -> str:
     # return str(result.final_output)
 
 
-
-asyncio.run(run_agent("what services you provide. Please tell me about yourself "))
+prompt = input("Please enter your prompt: ")
+if not prompt:
+    prompt = "what services you provide. Please tell me about yourself "
+asyncio.run(run_agent(prompt))
