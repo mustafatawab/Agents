@@ -1,4 +1,4 @@
-from agents import Agent, Runner, AsyncOpenAI , OpenAIChatCompletionsModel, RunContextWrapper,handoff, function_tool
+from agents import Agent, Runner, AsyncOpenAI , OpenAIChatCompletionsModel, RunContextWrapper,handoff, function_tool, ModelSettings
 from agents.run import RunConfig
 from dotenv import load_dotenv
 import os
@@ -47,10 +47,30 @@ class EscilationData(BaseModel):
     reason: str
 
 def on_planning(wrapper: RunContextWrapper, input: EscilationData):
-    print("\n On Planning Agent Handoffs \n Input" , input)
+    print("\n\n On Planning Agent Handoffs \n Input" , input)
+    print("\n")
 
 def on_search(wrapper: RunContextWrapper , input: EscilationData):
-    print("\n On Search Agent Handoffs \n Input" , input)
+    print("\n\n On Search Agent Handoffs \n Input" , input)
+    print("\n")
+
+
+def on_lead_agent(wrapper: RunContextWrapper , input : EscilationData):
+    print(f"\n\n On Lead Agent --- input {input}")
+    print("\n")
+
+def on_report_agent(wrapper: RunContextWrapper , input : EscilationData):
+    print(f"\n\n On Report Agent --- input {input}")
+    print("\n")
+
+
+def on_synthesis(wrapper : RunContextWrapper , input: EscilationData):
+    print("\n\n On Synthesis Agent -- Input" , input)
+    print("\n")
+
+def on_citation(wrapper : RunContextWrapper , input: EscilationData):
+    print("\n\n On Citation Agent -- Input" , input)
+    print("\n")
 
 
 # def on_parallel_search(wrapper: RunContextWrapper , input: EscilationData):
@@ -78,94 +98,128 @@ config: RunConfig = RunConfig(
 report_agent: Agent = Agent(
     name='report_agent',
     instructions=f'''
-                You will final professional research. You should transfer to the orchestrator_agent.
+    You Synthesize findings into a coherent report. Organize by themes, include key insights, trends, and numbered citations [1], [2].
+    Add full source details at the end. And get better result to the user to understand in a concise way. You can use your own tools to get better solutions.
                 ''',
     model=model,
-    tools=[web_search, extract_url]
+    tools=[extract_url],
+    model_settings=ModelSettings(temperature=1 )
 )
 
-search_agent: Agent = Agent(
+search_agent_a: Agent = Agent(
     name='search_agent',
-    instructions=f''' {RECOMMENDED_PROMPT_PREFIX}
-    you can search over the internet. You will pass the response to parallel_search_agent
+    instructions=f'''
+   You are a search agent.
+    1. Use the web_search tool to gather information.
+    2. Always provide citations with URLs.
+    3. After summarizing, ALWAYS handoff to report_agent.
     ''',
     model=model,
-    tools=[ web_search , extract_url],
-    # handoffs=[
-    #     handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
-    # ]    
+    tools=[ web_search],
+    handoffs=[
+        handoff(agent=report_agent , on_handoff=on_report_agent , input_type=EscilationData)
+    ],
+    model_settings=ModelSettings(temperature=0.5 )
+
 
 )
+
+search_agent_b: Agent = Agent(
+    name='search_agent',
+    instructions=f'''
+    You are a search agent.
+    1. Use the web_search tool to gather information.
+    2. Always provide citations with URLs.
+    3. After summarizing, ALWAYS handoff to report_agent.
+     ''',
+    model=model,
+    tools=[ web_search],
+    handoffs=[
+        handoff(agent=report_agent , on_handoff=on_report_agent , input_type=EscilationData)
+    ],
+    model_settings=ModelSettings(temperature=0.5 )
+
+
+)
+
 
 
 planning_agent: Agent = Agent(
     name="planning_agent",
-    instructions=f'''  
-    You are planning agent who will break the user query into parts and then must transfer to report_agent
+    instructions='''  
+    You are a planning agent. Break the user query into sub-tasks.
+    For each sub-task, output exactly ONE JSON object in the format:
+    {"topic": "<sub task>", "reason": "<why this sub-task>"}
+
+    1. Do not output multiple JSON objects at once.
+    2. Always hand off one EscilationData at a time.
+    3. After dividing into sub task, ALWAYS handoff to report_agent.
     ''',
     model=model,
     handoffs=[
-        handoff(agent=search_agent, on_handoff=on_search, input_type=EscilationData ),
-        # handoff(agent=parallel_search_agent , on_handoff=on_parallel_search , input_type=EscilationData)
-    ]
+        handoff(agent=search_agent_a, on_handoff=on_search, input_type=EscilationData ),
+        handoff(agent=search_agent_a, on_handoff=on_search, input_type=EscilationData ),
+    ],
+    model_settings=ModelSettings(temperature=1 )
+
 )
 
 
-
-def on_synthesis(wrapper : RunContextWrapper , input: EscilationData):
-    print("On Synthesis Agent -- Input" , input)
-
-synthesis_agent: Agent = Agent(
-    name='synthesis_agent',
-    instructions=f' You will gather information and combines findings into organized insights. Then you must transfer to the planning_agent',
+citation_checker: Agent = Agent(
+    name="citation_checker",
+    instructions="""
+    You are a citation and source verification agent.
+    1. Verify all citations in the report using the extract_url tool.
+    2. Ensure each claim has at least one valid, relevant source.
+    3. Flag broken or irrelevant links.
+    4. Return a clean report with corrected citations.
+    """,
     model=model,
-    handoffs=[handoff(agent=planning_agent , on_handoff=on_planning , input_type=EscilationData)]
+    tools=[extract_url],
+    model_settings=ModelSettings(temperature=0.3)
 )
-
 
 
 lead_agent: Agent = Agent(
     name='orchestrator_agent',
-    instructions=f""" {RECOMMENDED_PROMPT_PREFIX}. You will first transfer to the synthesis_agent""",
-    tools=[
-    search_agent.as_tool(
-        tool_name='search_web',
-        tool_description="Search Goolge and Web"
-    ),
-    report_agent.as_tool(
-        tool_name='report_writer',
-        tool_description='professional report writer'
-    )
-    ],
+    instructions=f"""
+    You are the orchestrator. Your ONLY job is to:
+    1. Receive the user query.
+    2. Pass it to the planning_agent.
+    3. Do not answer the query yourself.
+    4. Do not ask the user for clarification — just delegate.
+    """,
     handoffs=[
-        handoff(agent=synthesis_agent, on_handoff=on_synthesis , input_type=EscilationData),
-    ]
+        handoff(agent=planning_agent, on_handoff=on_planning, input_type=EscilationData),
+
+    ],
+    model_settings=ModelSettings(temperature=1 )
+
 )
 
-def on_lead_agent(wrapper: RunContextWrapper , input : EscilationData):
-    print(f"On Lead Agent --- input {input}")
 
-def on_report_agent(wrapper: RunContextWrapper , input : EscilationData):
-    print(f"On Report Agent --- input {input}")
-
-
-planning_agent.handoffs.append(handoff(agent=report_agent , on_handoff=on_report_agent , input_type=EscilationData))
-report_agent.handoffs.append(handoff(agent=lead_agent, on_handoff=on_synthesis , input_type=EscilationData))
+report_agent.handoffs.append(handoff(agent=citation_checker, on_handoff=on_citation , input_type=EscilationData))
 
 
 async def run_agent():
 
-    response: Runner =  Runner.run_streamed(
-        lead_agent,
-        "Search deeply about difference between Agentic AI and Generative AI",
-        run_config=config,
-        max_turns=15
-    )
+    while True:
+        user_prompt = input("Enter your prompt (quit or exit for ending conversation) : ")
+        if user_prompt.lower() == "quit" or user_prompt == "exit":
+            break
+        
+        response: Runner =  Runner.run_streamed(
+            lead_agent,
+            user_prompt,
+            run_config=config,
+            max_turns=20
+        )
 
-    # print(response.last_agent.name)
-    async for event in response.stream_events():
-        if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
-            print(event.data.delta , end="" , flush=True)
+        # print(response.last_agent.name)
+        print("\n LLM Response \n")
+        async for event in response.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                print(event.data.delta , end="" , flush=True)
 
 
 asyncio.run(run_agent())
