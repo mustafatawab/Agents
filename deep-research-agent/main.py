@@ -147,13 +147,11 @@ search_agent_b: Agent = Agent(
 planning_agent: Agent = Agent(
     name="planning_agent",
     instructions='''  
-    You are a planning agent. Break the user query into sub-tasks.
-    For each sub-task, output exactly ONE JSON object in the format:
+   You are a planning agent. Break the user query into sub-tasks.
+    For each sub-task, output exactly ONE JSON object:
     {"topic": "<sub task>", "reason": "<why this sub-task>"}
 
-    1. Do not output multiple JSON objects at once.
-    2. Always hand off one EscilationData at a time.
-    3. After dividing into sub task, ALWAYS handoff to report_agent.
+    ⚠️ Always handoff to a search_agent
     ''',
     model=model,
     handoffs=[
@@ -189,11 +187,12 @@ lead_agent: Agent = Agent(
     3. Do not answer the query yourself.
     4. Do not ask the user for clarification — just delegate.
     """,
+    tools=[web_search],
     handoffs=[
         handoff(agent=planning_agent, on_handoff=on_planning, input_type=EscilationData),
 
     ],
-    model_settings=ModelSettings(temperature=1 )
+    model_settings=ModelSettings(temperature=0.2 )
 
 )
 
