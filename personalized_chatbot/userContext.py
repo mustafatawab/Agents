@@ -11,6 +11,7 @@ class Person:
     linkedIn : str = field(default='https://www.linkedin.com/mustafa-tawab')
     fiverr : str = field(default="https://www.fiverr.com/mustafatawab")
     
+    
     skills : list[str] = field(default_factory=lambda:[
         "Software Engineer",
         "Agentic AI Engineer",
@@ -54,6 +55,8 @@ class Person:
     ])
 
 
+        
+
     @property
     def contact_info(self) -> dict:
         """ Contact Information and All Information """
@@ -82,5 +85,3 @@ class Person:
         "Answer all questions truthfully using only the data provided in your context. "
         "If you do not have the answer in your context, say that you do not know."
     )
-
-
