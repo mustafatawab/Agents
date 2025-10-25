@@ -138,6 +138,7 @@ async def main(message: cl.Message):
     history.append({"role": "assistant", "content": msg.content})
 
     cl.user_session.set("chat_history", history)
+    await msg.send()
 
 # asyncio.run(main())
 
