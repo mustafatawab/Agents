@@ -88,7 +88,8 @@ reaction_on_message_received = false
 # Name of the assistant.
 name = "Assistant"
 
-# default_theme = "dark"
+login_page_image = "/public/favicon.png"
+default_theme = "dark"
 
 # layout = "wide"
 
@@ -118,10 +119,10 @@ alert_style = "classic"
 # custom_js_attributes = "async type = \"module\""
 
 # Custom login page image, relative to public directory or external URL
-# login_page_image = "/public/custom-background.jpg"
+login_page_image = "/public/custom-background.jpg"
 
 # Custom login page image filter (Tailwind internal filters, no dark/light variants)
-# login_page_image_filter = "brightness-50 grayscale"
+# login_page_image_filter = "brightness-100 grayscale"
 # login_page_image_dark_filter = "contrast-200 blur-sm"
 
 # Specify a custom meta URL (used for meta tags like og:url)
@@ -134,7 +135,7 @@ alert_style = "classic"
 logo_file_url = ""
 
 # Load assistant avatar image directly from URL.
-default_avatar_file_url = ""
+default_avatar_file_url = "public/favicon.png"
 
 # Specify a custom build directory for the frontend.
 # This can be used to customize the frontend code.
@@ -145,7 +146,7 @@ default_avatar_file_url = ""
 # [[UI.header_links]]
 #     name = "Issues"
 #     display_name = "Report Issue"
-#     icon_url = "https://avatars.githubusercontent.com/u/128686189?s=200&v=4"
+#     icon_url = "public/favicon.png"
 #     url = "https://github.com/Chainlit/chainlit/issues"
 #     target = "_blank" (default)  # Optional: "_self", "_parent", "_top".
 

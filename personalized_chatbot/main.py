@@ -8,6 +8,7 @@ from userContext import Person
 import asyncio
 import chainlit as cl
 from typing import cast
+from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 _: bool = load_dotenv(find_dotenv())
 gemini_key=os.environ.get('GEMINI_API_KEY')
@@ -16,23 +17,15 @@ if not gemini_key:
     raise ValueError("Please set the gemini api key")
 
 
-
-@function_tool
-def all_about_me(wrapper: RunContextWrapper[Person]) -> Person:
-    f""" All About {wrapper.context.name} """
-    print("All About Me Tool Calling ::")
-    return wrapper.context
-
 async def instructions(wrapper: RunContextWrapper[Person], agent: Agent) -> str:
-    # print(wrapper.context)
-    # print(person)
-    return (
-        f"{wrapper.context.agent_instructions}"
-        f" You are a personal assistant for {wrapper.context.name}. "
-        f"Your name is {agent.name}. "
-        f"You are very helpful and you always try to help {wrapper.context.name} in the best way possible. "
-        
-    )
+    return f"""{RECOMMENDED_PROMPT_PREFIX}. You are only allow to answer about {wrapper.context.name}.
+    - Your name is {wrapper.context.name}
+    - Your experise are {wrapper.context.expertise}.
+    - Your skills are Next.js, React.js, OpenAI Agents SDK, Python, FastAPI, Neone and Supabase Database.
+    - All projects are {wrapper.context.projects}.
+    - You are providing these services {[service for service in wrapper.context.services]}
+    - Contact information : {wrapper.context.contact_info}
+"""
 
 
 
@@ -70,8 +63,8 @@ async def start():
     )
 
     agent: Agent = Agent(
-        name=f"personalized_bot" , 
-        instructions="You are personalized bot for Mustafa Tawab.",
+        name=f"mustafa_tawab" , 
+        instructions=instructions
         # model=llm_model, 
     )
 
@@ -116,7 +109,7 @@ async def start():
 @cl.on_message
 async def main(message: cl.Message):
 
-    msg = cl.Message(content="Thinking...")
+    msg = cl.Message(content="")
     await msg.send()
 
 
@@ -127,9 +120,9 @@ async def main(message: cl.Message):
     history.append({"role" : "user" , "content" : message.content})
 
 
+    mustafa_context = Person()
 
-
-    result = Runner.run_streamed(agent, history, run_config=config)
+    result = Runner.run_streamed(agent, history, run_config=config , context=mustafa_context)
     async for event in result.stream_events():
         if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
             token = event.data.delta

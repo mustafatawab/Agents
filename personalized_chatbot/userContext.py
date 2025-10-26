@@ -12,45 +12,53 @@ class Person:
     fiverr : str = field(default="https://www.fiverr.com/mustafatawab")
     
     
-    skills : list[str] = field(default_factory=lambda:[
-        "Software Engineer",
-        "Agentic AI Engineer",
-        "Generative AI Engineer",
-        "Nextjs Developer",
-        "Modern Web App Developer"
+    expertise : list[str] = field(default_factory=lambda:[
+        "Agentic AI ",
+        "Generative AI ",
+        "Next.js and React.js",
+        "Modern Python",
+        "Backend Development",
+        "Docker Containerization"
     ])
 
     projects : list[dict[str, str]] = field(default_factory=lambda:[
         {
-        "name" : "Mal Blogs",
+        "title" : "Mal Blogs",
         "description" : "A blogging website build with Nexjts, Tailwind CSS, Headless CMS (Contentfull)",
         "url" : "https://mal-blogs.vercel.app/"
         },
 
         {
-            "name" : "User Gallery",
+            "title" : "User Gallery",
             "description" : "User can upload high resolution picture and can login too. It is build with nextjs, tailwind CSS, shadcn ui , typescript, and supabase",
             "url" : "https://user-gallery-website.vercel.app/"
         },
 
         {
-            "name" : "Elygance",
+            "title" : "Elygance",
             "description" : "An ecomerce store for fragrance. It is build with Nextjs, Tailwind CSS, Shadcn UI , Typescript, and Supabase",
             "url" : "https://elygance.vercel.app/"
         },
 
         {
-            "name" : "MyScribe",
-            "description": "Voice to text converter and record conversation between doctors and patient. It is build with Vuejs, Qusar Framework, Capacitor Mode, OpenAI , Laravel and MySQL."
+            "title" : "MyScribe",
+            "description": "Voice to text converter and record conversation between doctors and patient. It is build with Vuejs, Qusar Framework, Capacitor Mode, OpenAI , Laravel and MySQL.",
+            "url" : "https://www.app.myscribe.us"
+        },
+        {
+            "title" : "Farsight System",
+            "description" : "A software agency web application which are providing such software development solutions. This app has been created using Nextjs, Contentfull, Typescript, and Shadcn UI",
+            "url" : "https://www.farsightsystem.com"
         }
     ])
 
 
     services: list = field(default_factory=lambda: [
-        "AI Agent Development with OpenAI SDK",
-        "SaaS MVP Development (FastAPI + Supabase + Next.js)",
-        "AI Integration in Web Apps",
-        "Fullstack Development",
+        "Building Custom AI Agentts",
+        "Custom Full Stack Web Applications",
+        "AI Web Application",
+        "Software Developement",
+        "WordPress Solution",
         "Containerization & Deployment with Docker/Kubernetes"
     ])
 
@@ -70,18 +78,4 @@ class Person:
             "fiverr profile" : self.fiverr
         }
 
-    @property
-    def agent_instructions(self) -> str:
-        """ System Instructions or Agent Persona"""
-        return f""" You are special and personalize bot. Your name is {self.name}. You are allowed to answer anything else. You just answer about {self.name} and all the data you have in your context.  """
-
-    @property
-    def about_me(self) -> str:
-        f""" About {self.name}"""
-        return (
-        f"You are {self.name}. All the information provided in your context is your own personal "
-        f"information, skills, experience, and projects. "
-        f"You must speak in the first person as if you are {self.name} yourself. "
-        "Answer all questions truthfully using only the data provided in your context. "
-        "If you do not have the answer in your context, say that you do not know."
-    )
+    
